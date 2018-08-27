@@ -9,25 +9,25 @@ load dataset3.mat
 k_start = 970;
 k_end = 1100;
 timesteps = k_start:k_end;
-noise = 0.002;
+noise = 0.01;
 
 measurement_lists = gen_meas(timesteps, noise);
-K = length(measurement_lists(1,:,1));
+K = length(measurement_lists(:,1));
 
 r_ka_chained = zeros(3,K);
 r_ja_pseudo = zeros(3,K,20);
+r_ja_pseudo(1:K,1:20) = struct('meas',zeros(3,1),'cov',zeros(3,3));
 % r_ka_chained(:,1) = r_i_vk_i(:,timesteps(1));
 % C_k_minus_a = ax_ang2dcm(theta_vk_i(:,timesteps(1)));
 C_k_minus_a = eye(3);
-r_ja_pseudo(:,1,:) = measurement_lists(:,1,:);
-r_pseudo_cov = zeros(3,K,20);
-r_pseudo_cov(:,1,:) = [noise;noise;noise];
+r_ja_pseudo(1,:) = measurement_lists(1,:);
+% r_pseudo_cov(:,1,:) = [noise;noise;noise];
 
 
 for k = 2:K
-    meas_k = squeeze(measurement_lists(:,k,:));
-    meas_k_minus = squeeze(measurement_lists(:,k-1,:));
-    [r_k_kminus, C_Kk, rho_est,r_cov,rho_cov,flag] = WOLATE(meas_k,meas_k_minus, eye(3).*noise,eye(3).*noise);
+    meas_k = measurement_lists(k,:);
+    meas_k_minus = measurement_lists(k-1,:);
+    [r_k_kminus, C_Kk, rho_est,flag] = WOLATE(meas_k,meas_k_minus);
     
     if isempty( r_k_kminus)
         error('No common landmarks between pose k-1 and k')
@@ -79,5 +79,9 @@ scatter3(r_ja_a_true(1,:), r_ja_a_true(2,:), r_ja_a_true(3,:))
 scatter3(r_j_a_est(1,:), r_j_a_est(2,:), r_j_a_est(3,:))
 plot3(r_ka_chained(1,2:end),r_ka_chained(2,2:end),r_ka_chained(3,2:end))
 legend('true','BA','true','BA','daisy-chained WOLATE')
+
+%% Error Calculations
+
+
 
 

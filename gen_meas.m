@@ -1,8 +1,9 @@
-function [ rk_j_k, noise ] = gen_meas(timesteps, noise)
+function [ rk_j_k] = gen_meas(timesteps, noise)
 %GEN_MEAS Generates measurements in the vehicle frame
 %   Detailed explanation goes here
     load dataset3.mat;
-    rk_j_k = zeros(3,length(timesteps),20);
+%     rk_j_k = zeros(3,length(timesteps),20);
+    rk_j_k(1:length(timesteps),1:20) = struct('meas',zeros(3,1),'cov',zeros(3,3));
     for i=1:length(timesteps)
        k = timesteps(i);
        for j=1:20
@@ -11,7 +12,8 @@ function [ rk_j_k, noise ] = gen_meas(timesteps, noise)
               phi_k = theta_vk_i(:,k);
               C_vk_i = ax_ang2dcm(phi_k);
               meas_jk = C_vk_i*meas_inertial;
-              rk_j_k(:,i,j) = meas_jk + noise*randn(3,1);
+              rk_j_k(i,j).meas = meas_jk + noise*randn(3,1);
+              rk_j_k(i,j).cov = eye(3).*noise;
           end
        end
     end

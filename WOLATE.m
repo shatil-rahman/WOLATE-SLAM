@@ -1,4 +1,4 @@
-function [ r_k_k_minus, C_k_k_minus, rho_jk, r_cov, rho_cov,exit_code] = WOLATE( r_jk, r_jk_minus, R_jk, R_jk_minus )
+function [ r_k_k_minus, C_k_k_minus, rho,exit_code] = WOLATE( r_jk, r_jk_minus)
 %WOLATE Computes optimal C_k_kminus and r_k_k_minus 
     
     M = length(r_jk(1,:));
@@ -9,10 +9,14 @@ function [ r_k_k_minus, C_k_k_minus, rho_jk, r_cov, rho_cov,exit_code] = WOLATE(
     W_inv = zeros(6*M,6*M);
     indexes = [];
     eps = 0.000001;
-    r_k_k_minus = [];
-    C_k_k_minus = [];
-    rho_jk = [];
     
+    r_k_k_minus.value = zeros(3,1);
+    r_k_k_minus.cov = zeros(3,3);
+    C_k_k_minus.value = eye(3);
+    C_k_k_minus.cov = zeros(3,3); %The covariance is of the ROTATION VECTOR NOT THE DCM!!!!!
+    rho_j_k(1,1:20) = struct('value',zeros(3,1),'cov',zeros(3,3));
+    R_jk = r_jk.cov;
+    R_jk_minus = r_jk_minus.cov;
     %% Create the A and B matrices
     for j = 1:M
         if isequal(r_jk_minus(:,j),zeros(3,1)) || isequal(r_jk(:,j),zeros(3,1))
@@ -37,7 +41,7 @@ function [ r_k_k_minus, C_k_k_minus, rho_jk, r_cov, rho_cov,exit_code] = WOLATE(
     
     %%Check if any common landmarks
     
-    if length(indexes) == 0
+    if isempty(indexes)
         exit_code = -1;
         return
     end
@@ -60,22 +64,28 @@ function [ r_k_k_minus, C_k_k_minus, rho_jk, r_cov, rho_cov,exit_code] = WOLATE(
     x_k = ((A_k'*W_inv*A_k) + eps*eye(length(A_k(1,:))))\(A_k'*W_inv)*b_k;
     
     System_info = (A_k'*W_inv*A_k) + eps*eye(length(A_k(1,:)));
-    covariance_tk = inv(System_info);
+    
+    %% Means
+    
+    r_k_k_minus.value = -(eye(3) + cross_oper(x_k(4:6)))\x_k(1:3);
+    C_k_k_minus.value = (eye(3) + cross_oper(x_k(4:6)))\(eye(3) - cross_oper(x_k(4:6)));
+    
+    a = x_k(4:6)./(norm(x_k(4:6)));
+    theta = 2*atan((norm(x_k(4:6))));
+    rotation_vec = a.*theta;
+    
+    %% Covariances 
     
     
-    r_k_k_minus = -(eye(3) + cross_oper(x_k(4:6)))\x_k(1:3);
-    C_k_k_minus = (eye(3) + cross_oper(x_k(4:6)))\(eye(3) - cross_oper(x_k(4:6)));
     
-    r_cov = (eye(3) + cross_oper(x_k(4:6)))\covariance_tk(1:3,1:3)/(eye(3) + cross_oper(x_k(4:6))).';
-    r_cov = diag(r_cov);
-    
-    rho_cov = zeros(3*M,1);
-    rho_cov(indexes) = diag(covariance_tk(7:end,7:end));
-    rho_cov = reshape(rho_cov,3,M);
-    
-    rho_jk = zeros(3*M,1);
-    rho_jk(indexes) = x_k(7:end);
-    rho_jk = reshape(rho_jk, 3,M);
+    r_k_k_minus.cov = (eye(3) + cross_oper(x_k(4:6)))/System_info(1:3,1:3)*(eye(3) + cross_oper(x_k(4:6))).';
+    C_k_k_minus.cov = inv(System_info(4:6,4:6));
+    rho = zeros(3*M,1);
+    rho(indexes) = x_k(7:end);
+    for j=1:M
+       rho_j_k(1,j).value = rho(3*j-2:3*j);
+       rho_j_k(1,j).cov = inv(System_info(6+3*j-2:6+3*j));
+    end
 %     rho_jk = x_k(7:end);
     exit_code = 1;
 

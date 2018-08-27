@@ -22,7 +22,8 @@ function [ r_ka_a,C_ka,r_j_a_est] = BA_WOLATE( r_ja_k, r_jk_k )
               A(meas_no:meas_no+2, 6*K + 3*j-2: 6*K + 3*j) = -eye(3);
 %               W_j = R_jk_minus - (R_jk_minus.'/(R_jk + R_jk_minus))*R_jk_minus;
 %               W_j = r_jk_k(:,k,j) - (r_jk_k(:,k,j).'/(r_ja_k(:,k,j) + r_jk_k(:,k,j)))*r_jk_k(:,k,j);
-              W_inv(meas_no:3*j,3*j-2:3*j) = inv(W_j);
+%               W_inv(meas_no:meas_no+2,meas_no:meas_no+2) = eye(3);
+              W_inv(meas_no:meas_no+2,meas_no:meas_no+2) = eye(3).*inv(k/nnz(r_ja_k(:,k,j)));
               
 %               meas_no = meas_no + 3;
 %               B(meas_no:meas_no+2) = -r_ja_k(:,k,j);
@@ -34,9 +35,9 @@ function [ r_ka_a,C_ka,r_j_a_est] = BA_WOLATE( r_ja_k, r_jk_k )
            
        end
     end
-    System_mat = A.'*A;
+    System_mat = A.'*W_inv*A;
     System_mat = System_mat(7:end,7:end);
-    Sys_vec = A.'*B;
+    Sys_vec = A.'*W_inv*B;
     Sys_vec = Sys_vec(7:end);
     
 %     x = (A.'*A)\A.'*B;
